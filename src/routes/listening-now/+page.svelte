@@ -10,7 +10,29 @@
 	let interval: NodeJS.Timeout;
 
 	// Store flame particle positions for each user
-	let userFlames: Map<string, { x: number; y: number; targetX: number; targetY: number; particles: any[] }> = new Map();
+	let userFlames: Map<string, {
+		x: number;
+		y: number;
+		targetX: number;
+		targetY: number;
+		particles: any[];
+		userId: string;
+		userName: string;
+		spotifyId?: string;
+	}> = new Map();
+
+	// Track clickable areas for each user
+	let clickableAreas: Array<{
+		x: number;
+		y: number;
+		radius: number;
+		userId: string;
+		userName: string;
+		spotifyId?: string;
+	}> = [];
+
+	// Track hovered user
+	let hoveredUserId: string | null = null;
 
 	// Generate deterministic colors from track ID
 	function generateVisualizationFromTrackId(trackId: string) {
@@ -183,6 +205,9 @@
 	function drawUserFlames(time: number) {
 		if (!ctx || !canvas) return;
 
+		// Clear clickable areas for this frame
+		clickableAreas = [];
+
 		// Update user positions (use trackListeners to only show current track listeners)
 		trackListeners.forEach((listener, index) => {
 			if (!listener.user) return;
@@ -203,7 +228,10 @@
 					y: centerY + Math.sin(angle) * radius,
 					targetX: centerX + Math.cos(angle) * radius,
 					targetY: centerY + Math.sin(angle) * radius,
-					particles: []
+					particles: [],
+					userId: listener.user.id,
+					userName: listener.user.name || 'User',
+					spotifyId: listener.user.spotifyId
 				});
 			}
 
@@ -228,6 +256,32 @@
 			const maxSize = 20;
 			const dotSize = baseSize + (volume / 100) * (maxSize - baseSize);
 			const opacity = 0.3 + (volume / 100) * 0.7;
+
+			// Check if this user is being hovered
+			const isHovered = hoveredUserId === userId;
+
+			// Draw hover highlight
+			if (isHovered) {
+				ctx.save();
+				ctx.strokeStyle = '#1DB954';
+				ctx.lineWidth = 3;
+				ctx.globalAlpha = 0.8;
+				ctx.beginPath();
+				ctx.arc(position.x, position.y, dotSize * 3, 0, Math.PI * 2);
+				ctx.stroke();
+				ctx.restore();
+
+				// Draw tooltip-like text above the flame
+				ctx.save();
+				ctx.globalAlpha = 0.9;
+				ctx.fillStyle = '#000';
+				ctx.fillRect(position.x - 60, position.y - dotSize * 3 - 30, 120, 24);
+				ctx.fillStyle = '#1DB954';
+				ctx.font = '12px sans-serif';
+				ctx.textAlign = 'center';
+				ctx.fillText('Click to view playlists', position.x, position.y - dotSize * 3 - 12);
+				ctx.restore();
+			}
 
 			// Draw flame-like shape
 			const flameHeight = dotSize * 2.5;
@@ -304,6 +358,16 @@
 			ctx.font = '11px sans-serif';
 			ctx.textAlign = 'center';
 			ctx.fillText(listener.user.name?.split(' ')[0] || 'User', position.x, position.y + dotSize + 15);
+
+			// Add clickable area for this user
+			clickableAreas.push({
+				x: position.x,
+				y: position.y,
+				radius: Math.max(30, dotSize * 2), // Make clickable area larger than visual
+				userId: listener.user.id,
+				userName: listener.user.name || 'User',
+				spotifyId: listener.user.spotifyId
+			});
 		});
 
 		// Clean up old users that are no longer listening
@@ -346,6 +410,51 @@
 			};
 			window.addEventListener('resize', handleResize);
 
+			// Handle mouse movement for cursor change
+			const handleMouseMove = (e: MouseEvent) => {
+				const rect = canvas.getBoundingClientRect();
+				const x = e.clientX - rect.left;
+				const y = e.clientY - rect.top;
+
+				// Check if hovering over any user
+				const hoveredUser = clickableAreas.find(area => {
+					const distance = Math.sqrt(
+						Math.pow(x - area.x, 2) + Math.pow(y - area.y, 2)
+					);
+					return distance <= area.radius;
+				});
+
+				hoveredUserId = hoveredUser ? hoveredUser.userId : null;
+				canvas.style.cursor = hoveredUser ? 'pointer' : 'default';
+			};
+			canvas.addEventListener('mousemove', handleMouseMove);
+
+			// Handle clicks on users
+			const handleClick = (e: MouseEvent) => {
+				const rect = canvas.getBoundingClientRect();
+				const x = e.clientX - rect.left;
+				const y = e.clientY - rect.top;
+
+				// Check if clicked on any user
+				const clickedUser = clickableAreas.find(area => {
+					const distance = Math.sqrt(
+						Math.pow(x - area.x, 2) + Math.pow(y - area.y, 2)
+					);
+					return distance <= area.radius;
+				});
+
+				if (clickedUser) {
+					// Open Spotify user profile in new tab
+					// If we have spotifyId, use it; otherwise use the internal user ID
+					const spotifyUrl = clickedUser.spotifyId
+						? `https://open.spotify.com/user/${clickedUser.spotifyId}`
+						: `https://open.spotify.com/search/${encodeURIComponent(clickedUser.userName)}`;
+
+					window.open(spotifyUrl, '_blank');
+				}
+			};
+			canvas.addEventListener('click', handleClick);
+
 			// Start animation
 			animationId = requestAnimationFrame(animate);
 
@@ -357,6 +466,8 @@
 
 			return () => {
 				window.removeEventListener('resize', handleResize);
+				canvas.removeEventListener('mousemove', handleMouseMove);
+				canvas.removeEventListener('click', handleClick);
 			};
 		}
 	});
