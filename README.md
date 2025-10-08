@@ -1,85 +1,199 @@
 <div align="center">
   <svg width="800" height="300" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
-    <!-- Background gradient -->
     <defs>
-      <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#191414;stop-opacity:1" />
-        <stop offset="50%" style="stop-color:#1DB954;stop-opacity:0.3" />
-        <stop offset="100%" style="stop-color:#191414;stop-opacity:1" />
+      <!-- Harmonic gradient - represents musical harmony -->
+      <linearGradient id="harmonicGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" style="stop-color:#1DB954;stop-opacity:0.8">
+          <animate attributeName="stop-opacity" values="0.8;1;0.8" dur="3s" repeatCount="indefinite"/>
+        </stop>
+        <stop offset="50%" style="stop-color:#1ED760;stop-opacity:1"/>
+        <stop offset="100%" style="stop-color:#1DB954;stop-opacity:0.8">
+          <animate attributeName="stop-opacity" values="0.8;1;0.8" dur="3s" repeatCount="indefinite"/>
+        </stop>
       </linearGradient>
 
-      <!-- Flame gradient -->
-      <linearGradient id="flameGradient" x1="0%" y1="100%" x2="0%" y2="0%">
-        <stop offset="0%" style="stop-color:#FF6B35;stop-opacity:1" />
-        <stop offset="50%" style="stop-color:#FFD23F;stop-opacity:1" />
-        <stop offset="100%" style="stop-color:#FFF;stop-opacity:1" />
+      <!-- Pulse gradient - represents live/real-time activity -->
+      <radialGradient id="pulseGradient">
+        <stop offset="0%" style="stop-color:#FF6B35;stop-opacity:1"/>
+        <stop offset="50%" style="stop-color:#FFD23F;stop-opacity:0.8"/>
+        <stop offset="100%" style="stop-color:#1DB954;stop-opacity:0.3"/>
+      </radialGradient>
+
+      <!-- Background gradient -->
+      <linearGradient id="bgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" style="stop-color:#0A0E27;stop-opacity:1"/>
+        <stop offset="100%" style="stop-color:#191414;stop-opacity:1"/>
       </linearGradient>
 
-      <!-- Glow filter -->
+      <!-- Social network gradient -->
+      <linearGradient id="networkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#1DB954;stop-opacity:0"/>
+        <stop offset="50%" style="stop-color:#1DB954;stop-opacity:0.5"/>
+        <stop offset="100%" style="stop-color:#1DB954;stop-opacity:0"/>
+      </linearGradient>
+
+      <!-- Glow effect -->
       <filter id="glow">
-        <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
         <feMerge>
           <feMergeNode in="coloredBlur"/>
           <feMergeNode in="SourceGraphic"/>
         </feMerge>
+      </filter>
+
+      <!-- Soft glow -->
+      <filter id="softGlow">
+        <feGaussianBlur stdDeviation="2"/>
       </filter>
     </defs>
 
     <!-- Background -->
     <rect width="800" height="300" fill="url(#bgGradient)"/>
 
-    <!-- Network connections -->
-    <g opacity="0.3">
-      <line x1="100" y1="150" x2="200" y2="100" stroke="#1DB954" stroke-width="2"/>
-      <line x1="200" y1="100" x2="300" y2="120" stroke="#1DB954" stroke-width="2"/>
-      <line x1="200" y1="100" x2="250" y2="180" stroke="#1DB954" stroke-width="2"/>
-      <line x1="600" y1="100" x2="700" y2="150" stroke="#1DB954" stroke-width="2"/>
-      <line x1="600" y1="100" x2="550" y2="180" stroke="#1DB954" stroke-width="2"/>
-      <line x1="500" y1="200" x2="600" y2="100" stroke="#1DB954" stroke-width="2"/>
+    <!-- Harmonic wave pattern background -->
+    <g opacity="0.1">
+      <path d="M 0,150 Q 100,100 200,150 T 400,150 T 600,150 T 800,150"
+            stroke="#1DB954" stroke-width="1" fill="none"/>
+      <path d="M 0,150 Q 100,200 200,150 T 400,150 T 600,150 T 800,150"
+            stroke="#1DB954" stroke-width="1" fill="none"/>
     </g>
 
-    <!-- User nodes -->
-    <circle cx="100" cy="150" r="8" fill="#1DB954" opacity="0.6"/>
-    <circle cx="200" cy="100" r="8" fill="#1DB954" opacity="0.6"/>
-    <circle cx="300" cy="120" r="8" fill="#1DB954" opacity="0.6"/>
-    <circle cx="250" cy="180" r="8" fill="#1DB954" opacity="0.6"/>
-    <circle cx="700" cy="150" r="8" fill="#1DB954" opacity="0.6"/>
-    <circle cx="600" cy="100" r="8" fill="#1DB954" opacity="0.6"/>
-    <circle cx="550" cy="180" r="8" fill="#1DB954" opacity="0.6"/>
-    <circle cx="500" cy="200" r="8" fill="#1DB954" opacity="0.6"/>
+    <!-- Central Harmonique Symbol - Abstract H formed by sound waves -->
+    <g transform="translate(400, 120)">
+      <!-- Left vertical harmonic wave -->
+      <path d="M -40,0 Q -35,-20 -40,-40 Q -35,-60 -40,-80"
+            stroke="url(#harmonicGradient)" stroke-width="4" fill="none" filter="url(#glow)">
+        <animate attributeName="d"
+                 values="M -40,0 Q -35,-20 -40,-40 Q -35,-60 -40,-80;
+                         M -40,0 Q -45,-20 -40,-40 Q -45,-60 -40,-80;
+                         M -40,0 Q -35,-20 -40,-40 Q -35,-60 -40,-80"
+                 dur="2s" repeatCount="indefinite"/>
+      </path>
 
-    <!-- Central flame visualization -->
-    <g transform="translate(400, 150)" filter="url(#glow)">
-      <!-- Outer flame -->
-      <path d="M 0,-60 Q -20,-40 -15,-20 Q -10,0 0,10 Q 10,0 15,-20 Q 20,-40 0,-60 Z"
-            fill="url(#flameGradient)" opacity="0.6"/>
-      <!-- Inner flame -->
-      <path d="M 0,-45 Q -12,-30 -8,-15 Q -5,0 0,5 Q 5,0 8,-15 Q 12,-30 0,-45 Z"
-            fill="#FFF" opacity="0.8"/>
-      <!-- Core -->
-      <ellipse cx="0" cy="-10" rx="5" ry="8" fill="#4FC3F7" opacity="0.9"/>
+      <!-- Right vertical harmonic wave -->
+      <path d="M 40,0 Q 35,-20 40,-40 Q 35,-60 40,-80"
+            stroke="url(#harmonicGradient)" stroke-width="4" fill="none" filter="url(#glow)">
+        <animate attributeName="d"
+                 values="M 40,0 Q 35,-20 40,-40 Q 35,-60 40,-80;
+                         M 40,0 Q 45,-20 40,-40 Q 45,-60 40,-80;
+                         M 40,0 Q 35,-20 40,-40 Q 35,-60 40,-80"
+                 dur="2s" repeatCount="indefinite"/>
+      </path>
+
+      <!-- Central connecting wave -->
+      <path d="M -40,-40 Q 0,-35 40,-40"
+            stroke="url(#harmonicGradient)" stroke-width="4" fill="none" filter="url(#glow)">
+        <animate attributeName="d"
+                 values="M -40,-40 Q 0,-35 40,-40;
+                         M -40,-40 Q 0,-45 40,-40;
+                         M -40,-40 Q 0,-35 40,-40"
+                 dur="1.5s" repeatCount="indefinite"/>
+      </path>
+
+      <!-- Radiating sound waves from center -->
+      <circle r="60" fill="none" stroke="#1DB954" stroke-width="0.5" opacity="0.3">
+        <animate attributeName="r" from="20" to="60" dur="3s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" from="0.6" to="0" dur="3s" repeatCount="indefinite"/>
+      </circle>
+      <circle r="80" fill="none" stroke="#1DB954" stroke-width="0.5" opacity="0.2">
+        <animate attributeName="r" from="20" to="80" dur="4s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" from="0.5" to="0" dur="4s" repeatCount="indefinite"/>
+      </circle>
+
+      <!-- Central pulse - represents real-time activity -->
+      <circle r="8" fill="url(#pulseGradient)" filter="url(#glow)">
+        <animate attributeName="r" values="8;12;8" dur="1s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.8;1;0.8" dur="1s" repeatCount="indefinite"/>
+      </circle>
     </g>
 
-    <!-- Sound waves -->
+    <!-- Social network visualization - connected listeners -->
     <g opacity="0.4">
-      <path d="M 340,150 Q 320,130 300,150 Q 320,170 340,150" stroke="#1DB954" stroke-width="2" fill="none"/>
-      <path d="M 460,150 Q 480,130 500,150 Q 480,170 460,150" stroke="#1DB954" stroke-width="2" fill="none"/>
+      <!-- Left network -->
+      <path d="M 50,100 Q 150,80 250,120" stroke="url(#networkGradient)" stroke-width="2" fill="none"/>
+      <circle cx="50" cy="100" r="5" fill="#1DB954">
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="3s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="150" cy="80" r="4" fill="#1ED760">
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="3s" begin="0.5s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="250" cy="120" r="6" fill="#1DB954">
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="3s" begin="1s" repeatCount="indefinite"/>
+      </circle>
+
+      <!-- Right network -->
+      <path d="M 550,120 Q 650,80 750,100" stroke="url(#networkGradient)" stroke-width="2" fill="none"/>
+      <circle cx="550" cy="120" r="6" fill="#1DB954">
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="3s" begin="1.5s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="650" cy="80" r="4" fill="#1ED760">
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="3s" begin="2s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="750" cy="100" r="5" fill="#1DB954">
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="3s" begin="2.5s" repeatCount="indefinite"/>
+      </circle>
+
+      <!-- Bottom network -->
+      <circle cx="200" cy="160" r="4" fill="#1ED760">
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="3s" begin="0.8s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="600" cy="160" r="4" fill="#1ED760">
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="3s" begin="1.8s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+
+    <!-- Musical frequency bars - representing real-time listening -->
+    <g transform="translate(400, 150)" opacity="0.3">
+      <rect x="-60" y="0" width="4" height="20" fill="#FF6B35">
+        <animate attributeName="height" values="20;35;20" dur="0.8s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="0;-15;0" dur="0.8s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="-50" y="0" width="4" height="25" fill="#FFD23F">
+        <animate attributeName="height" values="25;40;25" dur="0.9s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="0;-15;0" dur="0.9s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="-40" y="0" width="4" height="30" fill="#1DB954">
+        <animate attributeName="height" values="30;50;30" dur="1s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="0;-20;0" dur="1s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="-30" y="0" width="4" height="35" fill="#1ED760">
+        <animate attributeName="height" values="35;55;35" dur="1.1s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="0;-20;0" dur="1.1s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="26" y="0" width="4" height="35" fill="#1ED760">
+        <animate attributeName="height" values="35;55;35" dur="1.1s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="0;-20;0" dur="1.1s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="36" y="0" width="4" height="30" fill="#1DB954">
+        <animate attributeName="height" values="30;50;30" dur="1s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="0;-20;0" dur="1s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="46" y="0" width="4" height="25" fill="#FFD23F">
+        <animate attributeName="height" values="25;40;25" dur="0.9s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="0;-15;0" dur="0.9s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="56" y="0" width="4" height="20" fill="#FF6B35">
+        <animate attributeName="height" values="20;35;20" dur="0.8s" repeatCount="indefinite"/>
+        <animate attributeName="y" values="0;-15;0" dur="0.8s" repeatCount="indefinite"/>
+      </rect>
     </g>
 
     <!-- Title -->
-    <text x="400" y="230" font-family="Arial Black, sans-serif" font-size="72" font-weight="bold"
-          text-anchor="middle" fill="#1DB954">HARMONIQUE</text>
+    <text x="400" y="210" font-family="Arial, sans-serif" font-size="58" font-weight="300"
+          text-anchor="middle" fill="#1DB954" filter="url(#glow)">HARMONIQUE</text>
 
     <!-- Subtitle -->
-    <text x="400" y="260" font-family="Arial, sans-serif" font-size="16"
-          text-anchor="middle" fill="#B3B3B3">Real-time Music • Social Listening • Live Vibes</text>
+    <text x="400" y="240" font-family="Arial, sans-serif" font-size="14" font-weight="300"
+          text-anchor="middle" fill="#B3B3B3" opacity="0.8">
+      Where Music Lives • Real-Time Social Listening • Spotify Connected
+    </text>
 
-    <!-- Musical notes floating -->
-    <g opacity="0.5">
-      <text x="150" y="80" font-size="20" fill="#1DB954">♪</text>
-      <text x="650" y="90" font-size="16" fill="#1DB954">♫</text>
-      <text x="250" y="220" font-size="18" fill="#1DB954">♪</text>
-      <text x="550" y="230" font-size="20" fill="#1DB954">♫</text>
+    <!-- Decorative elements -->
+    <g opacity="0.2">
+      <!-- Left decorative wave -->
+      <path d="M 50,220 Q 100,210 150,220" stroke="#1DB954" stroke-width="1" fill="none"/>
+      <!-- Right decorative wave -->
+      <path d="M 650,220 Q 700,210 750,220" stroke="#1DB954" stroke-width="1" fill="none"/>
     </g>
   </svg>
 </div>
