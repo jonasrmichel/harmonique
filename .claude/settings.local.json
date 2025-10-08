@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npx sv create:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx svelte-kit sync)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)",
+      "Bash(lsof:*)",
+      "Bash(awk:*)",
+      "Bash(xargs kill:*)",
+      "Bash(ngrok http:*)",
+      "Bash(sqlite3:*)",
+      "Bash(xargs sed:*)",
+      "Bash(find:*)",
+      "Read(//Users/jmichel/code/github.com/jonasrmichel/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

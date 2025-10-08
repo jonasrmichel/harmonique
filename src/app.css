@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+	:root {
+		--spotify-green: #1DB954;
+		--spotify-black: #191414;
+		--spotify-white: #FFFFFF;
+		--spotify-gray: #535353;
+	}
+
+	body {
+		@apply bg-spotify-black text-spotify-white;
+	}
+}
+
+@layer components {
+	.btn-primary {
+		@apply bg-spotify-green text-white px-6 py-3 rounded-full font-semibold hover:bg-green-600 transition-colors;
+	}
+
+	.btn-secondary {
+		@apply bg-transparent border border-gray-400 text-gray-300 px-6 py-3 rounded-full font-semibold hover:border-white hover:text-white transition-colors;
+	}
+
+	.card {
+		@apply bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800 transition-colors;
+	}
+}
