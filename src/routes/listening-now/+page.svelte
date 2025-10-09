@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
@@ -33,6 +34,14 @@
 
 	// Track hovered user
 	let hoveredUserId: string | null = null;
+
+	// Menu state
+	let showMenu = false;
+	let menuPosition = { x: 0, y: 0 };
+	let selectedUser: any = null;
+	let isListeningAlong = false;
+	let currentListenAlongTarget: string | null = null;
+	let syncInterval: NodeJS.Timeout;
 
 	// Generate deterministic colors from track ID
 	function generateVisualizationFromTrackId(trackId: string) {
@@ -81,9 +90,101 @@
 				const data = await listenersResponse.json();
 				listeners = data.nowPlayingList || [];
 			}
+
+			// Check listen-along status
+			const statusResponse = await fetch('/api/listen-along/status');
+			if (statusResponse.ok) {
+				const status = await statusResponse.json();
+				if (status.active) {
+					isListeningAlong = true;
+					currentListenAlongTarget = status.listenAlong.targetUser.id;
+				} else {
+					isListeningAlong = false;
+					currentListenAlongTarget = null;
+				}
+			}
 		} catch (error) {
 			console.error('Failed to fetch listening data:', error);
 		}
+	}
+
+	// Start listening along with a user
+	async function startListenAlong(userId: string) {
+		try {
+			const response = await fetch('/api/listen-along/start', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ targetUserId: userId })
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				isListeningAlong = true;
+				currentListenAlongTarget = userId;
+				showMenu = false;
+
+				// Show success message
+				alert(`Now listening along with ${selectedUser?.userName || 'user'}! Your Spotify will sync with their playback.`);
+
+				// Start auto-sync interval
+				if (syncInterval) clearInterval(syncInterval);
+				syncInterval = setInterval(syncPlayback, 5000); // Sync every 5 seconds
+
+				// Initial sync
+				await syncPlayback();
+			} else {
+				const error = await response.json();
+				alert(`Failed to start listening along: ${error.error}`);
+			}
+		} catch (error) {
+			console.error('Failed to start listen along:', error);
+			alert('Failed to start listening along');
+		}
+	}
+
+	// Stop listening along
+	async function stopListenAlong() {
+		try {
+			const response = await fetch('/api/listen-along/stop', {
+				method: 'POST'
+			});
+
+			if (response.ok) {
+				isListeningAlong = false;
+				currentListenAlongTarget = null;
+				if (syncInterval) {
+					clearInterval(syncInterval);
+					syncInterval = null;
+				}
+			}
+		} catch (error) {
+			console.error('Failed to stop listen along:', error);
+		}
+	}
+
+	// Sync playback with target user
+	async function syncPlayback() {
+		if (!isListeningAlong) return;
+
+		try {
+			const response = await fetch('/api/listen-along/sync', {
+				method: 'POST'
+			});
+
+			if (!response.ok) {
+				const error = await response.json();
+				console.error('Sync error:', error);
+			}
+		} catch (error) {
+			console.error('Failed to sync playback:', error);
+		}
+	}
+
+	// View user's playlists
+	function viewPlaylists(userId: string) {
+		goto(`/playlists?user=${userId}`);
 	}
 
 	// Animation functions
@@ -257,14 +358,47 @@
 			const dotSize = baseSize + (volume / 100) * (maxSize - baseSize);
 			const opacity = 0.3 + (volume / 100) * 0.7;
 
-			// Check if this user is being hovered
+			// Check if this user is being hovered or is being listened along with
 			const isHovered = hoveredUserId === userId;
+			const isListeningTarget = currentListenAlongTarget === userId;
+
+			// Draw listening along indicator (pulsing ring)
+			if (isListeningTarget) {
+				ctx.save();
+				const pulseSize = dotSize * 3 + Math.sin(time * 0.005) * 10;
+				ctx.strokeStyle = '#1DB954';
+				ctx.lineWidth = 4;
+				ctx.globalAlpha = 0.6 + Math.sin(time * 0.005) * 0.3;
+				ctx.beginPath();
+				ctx.arc(position.x, position.y, pulseSize, 0, Math.PI * 2);
+				ctx.stroke();
+
+				// Add inner ring
+				ctx.strokeStyle = '#1DB954';
+				ctx.lineWidth = 2;
+				ctx.globalAlpha = 0.8;
+				ctx.beginPath();
+				ctx.arc(position.x, position.y, dotSize * 2.5, 0, Math.PI * 2);
+				ctx.stroke();
+				ctx.restore();
+
+				// Draw "Listening Along" badge
+				ctx.save();
+				ctx.globalAlpha = 0.9;
+				ctx.fillStyle = '#1DB954';
+				ctx.fillRect(position.x - 50, position.y + dotSize + 25, 100, 20);
+				ctx.fillStyle = '#000';
+				ctx.font = 'bold 11px sans-serif';
+				ctx.textAlign = 'center';
+				ctx.fillText('LISTENING ALONG', position.x, position.y + dotSize + 38);
+				ctx.restore();
+			}
 
 			// Draw hover highlight
-			if (isHovered) {
+			if (isHovered && !isListeningTarget) {
 				ctx.save();
-				ctx.strokeStyle = '#1DB954';
-				ctx.lineWidth = 3;
+				ctx.strokeStyle = '#fff';
+				ctx.lineWidth = 2;
 				ctx.globalAlpha = 0.8;
 				ctx.beginPath();
 				ctx.arc(position.x, position.y, dotSize * 3, 0, Math.PI * 2);
@@ -276,10 +410,10 @@
 				ctx.globalAlpha = 0.9;
 				ctx.fillStyle = '#000';
 				ctx.fillRect(position.x - 60, position.y - dotSize * 3 - 30, 120, 24);
-				ctx.fillStyle = '#1DB954';
+				ctx.fillStyle = '#fff';
 				ctx.font = '12px sans-serif';
 				ctx.textAlign = 'center';
-				ctx.fillText('Click to view playlists', position.x, position.y - dotSize * 3 - 12);
+				ctx.fillText('Click for options', position.x, position.y - dotSize * 3 - 12);
 				ctx.restore();
 			}
 
@@ -444,16 +578,25 @@
 				});
 
 				if (clickedUser) {
-					// Open Spotify user profile in new tab
-					// If we have spotifyId, use it; otherwise use the internal user ID
-					const spotifyUrl = clickedUser.spotifyId
-						? `https://open.spotify.com/user/${clickedUser.spotifyId}`
-						: `https://open.spotify.com/search/${encodeURIComponent(clickedUser.userName)}`;
-
-					window.open(spotifyUrl, '_blank');
+					// Show menu instead of opening Spotify
+					selectedUser = clickedUser;
+					menuPosition = {
+						x: e.clientX,
+						y: e.clientY
+					};
+					showMenu = true;
 				}
 			};
 			canvas.addEventListener('click', handleClick);
+
+			// Close menu when clicking outside
+			const handleClickOutside = (e: MouseEvent) => {
+				const menu = document.getElementById('user-menu');
+				if (showMenu && menu && !menu.contains(e.target as Node)) {
+					showMenu = false;
+				}
+			};
+			document.addEventListener('click', handleClickOutside);
 
 			// Start animation
 			animationId = requestAnimationFrame(animate);
@@ -468,6 +611,7 @@
 				window.removeEventListener('resize', handleResize);
 				canvas.removeEventListener('mousemove', handleMouseMove);
 				canvas.removeEventListener('click', handleClick);
+				document.removeEventListener('click', handleClickOutside);
 			};
 		}
 	});
@@ -475,6 +619,10 @@
 	onDestroy(() => {
 		if (animationId) cancelAnimationFrame(animationId);
 		if (interval) clearInterval(interval);
+		if (syncInterval) clearInterval(syncInterval);
+		if (isListeningAlong) {
+			stopListenAlong();
+		}
 	});
 
 	// Get unique listeners for current track (includes volume)
@@ -552,7 +700,76 @@
 		>
 			← Back
 		</a>
+
+		<!-- Listen Along Status -->
+		{#if isListeningAlong}
+			<div class="absolute top-6 left-6 pointer-events-auto">
+				<div class="bg-spotify-green/20 border border-spotify-green rounded-lg px-4 py-2 flex items-center gap-3">
+					<div class="w-2 h-2 bg-spotify-green rounded-full animate-pulse"></div>
+					<span class="text-sm text-spotify-green font-medium">Listening Along</span>
+					<button
+						on:click={stopListenAlong}
+						class="ml-2 px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded text-xs transition-colors"
+					>
+						Stop
+					</button>
+				</div>
+			</div>
+		{/if}
 	</div>
+
+	<!-- User Menu -->
+	{#if showMenu}
+		<div
+			id="user-menu"
+			class="fixed z-50 bg-gray-900 border border-gray-700 rounded-lg shadow-lg py-2 min-w-[180px] pointer-events-auto"
+			style="left: {menuPosition.x}px; top: {menuPosition.y}px; transform: translate(-50%, 10px);"
+		>
+			<div class="px-4 py-2 border-b border-gray-700">
+				<p class="font-semibold text-sm">{selectedUser?.userName || 'User'}</p>
+			</div>
+			<button
+				on:click={() => {
+					viewPlaylists(selectedUser.userId);
+					showMenu = false;
+				}}
+				class="w-full text-left px-4 py-2 hover:bg-gray-800 transition-colors text-sm"
+			>
+				🎵 View Playlists
+			</button>
+			{#if currentListenAlongTarget === selectedUser?.userId}
+				<button
+					on:click={() => {
+						stopListenAlong();
+						showMenu = false;
+					}}
+					class="w-full text-left px-4 py-2 hover:bg-gray-800 transition-colors text-sm text-red-400"
+				>
+					⏹️ Stop Listening Along
+				</button>
+			{:else}
+				<button
+					on:click={() => {
+						startListenAlong(selectedUser.userId);
+					}}
+					class="w-full text-left px-4 py-2 hover:bg-gray-800 transition-colors text-sm text-spotify-green"
+				>
+					🎧 Listen Along
+				</button>
+			{/if}
+			{#if selectedUser?.spotifyId}
+				<button
+					on:click={() => {
+						window.open(`https://open.spotify.com/user/${selectedUser.spotifyId}`, '_blank');
+						showMenu = false;
+					}}
+					class="w-full text-left px-4 py-2 hover:bg-gray-800 transition-colors text-sm"
+				>
+					🔗 Open in Spotify
+				</button>
+			{/if}
+		</div>
+	{/if}
 </div>
 
 <style>

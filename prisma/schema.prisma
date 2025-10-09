@@ -29,6 +29,8 @@ model User {
   likes         Like[]
   comments      Comment[]
   nowPlaying    NowPlaying?
+  listeningAlong ListenAlong[] @relation("ListenerSessions")
+  listenedBy    ListenAlong[] @relation("TargetSessions")
 
   @@map("users")
 }
@@ -187,4 +189,23 @@ model NowPlaying {
 
   @@index([updatedAt])
   @@map("now_playing")
+}
+
+model ListenAlong {
+  id              String    @id @default(cuid())
+  listenerId      String
+  targetUserId    String
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  listener        User      @relation("ListenerSessions", fields: [listenerId], references: [id], onDelete: Cascade)
+  targetUser      User      @relation("TargetSessions", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@unique([listenerId, targetUserId])
+  @@index([listenerId])
+  @@index([targetUserId])
+  @@index([isActive])
+  @@map("listen_along_sessions")
 }

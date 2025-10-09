@@ -7,6 +7,6 @@ export default defineConfig({
 		hmr: {
 			protocol: 'ws'
 		},
-		allowedHosts: ['spocky.ouchwowboing.io', 'localhost']
+		allowedHosts: ['localhost', 'test.harmonique.io', 'harmonique.io', 'harmonique.ouchwowboing.io']
 	}
 });
