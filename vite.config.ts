@@ -4,9 +4,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
 	plugins: [sveltekit()],
 	server: {
-		hmr: {
-			protocol: 'ws'
-		},
+		hmr: false, // Disable HMR when running behind ngrok/HTTPS proxy
 		allowedHosts: ['localhost', 'test.harmonique.io', 'harmonique.io', 'harmonique.ouchwowboing.io']
 	}
 });

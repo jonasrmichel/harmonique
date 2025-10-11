@@ -16,10 +16,14 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 	try {
 		const body = await request.json();
-		const { recipientId, emoji, context } = body;
+		const { recipientId, emoji, context, broadcast } = body;
 
-		if (!recipientId || !emoji) {
-			return json({ error: 'Recipient and emoji are required' }, { status: 400 });
+		if (!emoji) {
+			return json({ error: 'Emoji is required' }, { status: 400 });
+		}
+
+		if (!broadcast && !recipientId) {
+			return json({ error: 'Recipient is required for non-broadcast emotes' }, { status: 400 });
 		}
 
 		// Validate emoji (basic check - allow common emojis)
@@ -40,6 +44,53 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			return json({ error: 'Invalid session' }, { status: 401 });
 		}
 
+		// Handle broadcast emotes (send to all users)
+		if (broadcast) {
+			// Broadcast to all active connections
+			const emoteData = {
+				type: 'emote',
+				emote: {
+					id: `broadcast-${Date.now()}`,
+					emoji,
+					sender: {
+						id: session.user.id,
+						name: session.user.name,
+						image: session.user.image
+					},
+					createdAt: new Date(),
+					broadcast: true
+				}
+			};
+
+			const data = JSON.stringify(emoteData);
+
+			// Send to all connected users (including sender for consistency)
+			let sentCount = 0;
+			connections.forEach((userConnections, userId) => {
+				userConnections.forEach(connection => {
+					try {
+						// @ts-ignore - SSE response has write method
+						connection.write(`data: ${data}\n\n`);
+						sentCount++;
+					} catch (err) {
+						// Connection might be closed, remove it
+						userConnections.delete(connection);
+					}
+				});
+			});
+
+			return json({
+				success: true,
+				broadcast: true,
+				sentTo: sentCount,
+				emote: {
+					emoji,
+					createdAt: new Date()
+				}
+			});
+		}
+
+		// Handle targeted emotes (original logic)
 		// Check if recipient exists
 		const recipient = await prisma.user.findUnique({
 			where: { id: recipientId }

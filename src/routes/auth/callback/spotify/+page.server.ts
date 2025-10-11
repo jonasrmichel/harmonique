@@ -20,17 +20,26 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 	}
 
 	try {
+		// Get credentials from environment (required - no fallbacks)
+		const baseUrl = process.env.PUBLIC_BASE_URL;
+		const clientId = process.env.AUTH_SPOTIFY_ID;
+		const clientSecret = process.env.AUTH_SPOTIFY_SECRET;
+
+		if (!baseUrl || !clientId || !clientSecret) {
+			throw new Error('Missing required environment variables: PUBLIC_BASE_URL, AUTH_SPOTIFY_ID, or AUTH_SPOTIFY_SECRET');
+		}
+
 		// Exchange code for tokens
 		const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/x-www-form-urlencoded',
-				'Authorization': 'Basic ' + Buffer.from('69bf2b1658984b20b7fcbe93915814f6:f2523336f86e4ba8b9cc15f293825963').toString('base64')
+				'Authorization': 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
 			},
 			body: new URLSearchParams({
 				grant_type: 'authorization_code',
 				code: code,
-				redirect_uri: 'https://spocky.ouchwowboing.io/auth/callback/spotify'
+				redirect_uri: `${baseUrl}/auth/callback/spotify`
 			})
 		});
 

@@ -15,12 +15,6 @@
 				</a>
 
 				<div class="flex items-center gap-6">
-					<a href="/discover" class="hover:text-spotify-green transition-colors">
-						Discover
-					</a>
-					<a href="/discover/people" class="hover:text-spotify-green transition-colors">
-						Taste Finder
-					</a>
 					<a href="/playlists" class="hover:text-spotify-green transition-colors">
 						Playlists
 					</a>

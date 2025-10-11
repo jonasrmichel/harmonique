@@ -187,6 +187,11 @@ model NowPlaying {
   contextType     String?   // playlist, album, artist, etc.
   contextUri      String?   // spotify:playlist:xxx, etc.
   contextName     String?   // Name of the playlist/album
+
+  // Position in visualization (for listening-now page)
+  positionX       Float?    // X coordinate in canvas
+  positionY       Float?    // Y coordinate in canvas
+
   updatedAt       DateTime  @updatedAt
 
   // Relations

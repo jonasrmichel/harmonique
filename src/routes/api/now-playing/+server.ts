@@ -1,28 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { PrismaClient } from '@prisma/client';
+import { getSpotifyToken } from '$lib/spotify-auth';
 
 const prisma = new PrismaClient();
-
-async function refreshAccessToken(refreshToken: string) {
-	const response = await fetch('https://accounts.spotify.com/api/token', {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/x-www-form-urlencoded',
-			'Authorization': 'Basic ' + Buffer.from('69bf2b1658984b20b7fcbe93915814f6:f2523336f86e4ba8b9cc15f293825963').toString('base64')
-		},
-		body: new URLSearchParams({
-			grant_type: 'refresh_token',
-			refresh_token: refreshToken
-		})
-	});
-
-	if (!response.ok) {
-		throw new Error('Failed to refresh token');
-	}
-
-	return response.json();
-}
 
 export const GET: RequestHandler = async ({ cookies }) => {
 	const sessionToken = cookies.get('session-token');
@@ -36,44 +17,19 @@ export const GET: RequestHandler = async ({ cookies }) => {
 		const session = await prisma.session.findUnique({
 			where: { sessionToken },
 			include: {
-				user: {
-					include: {
-						accounts: {
-							where: { provider: 'spotify' }
-						}
-					}
-				}
+				user: true
 			}
 		});
 
-		if (!session?.user?.accounts?.[0]) {
-			return json({ error: 'No Spotify account connected' }, { status: 401 });
+		if (!session?.user) {
+			return json({ error: 'No user found' }, { status: 401 });
 		}
 
-		const account = session.user.accounts[0];
-		let accessToken = account.access_token;
+		// Get a valid Spotify token (handles refresh automatically)
+		const accessToken = await getSpotifyToken(session.user.id);
 
-		// Check if token is expired
-		if (account.expires_at && account.expires_at < Math.floor(Date.now() / 1000)) {
-			// Refresh the token
-			if (account.refresh_token) {
-				try {
-					const tokens = await refreshAccessToken(account.refresh_token);
-
-					// Update the account with new tokens
-					await prisma.account.update({
-						where: { id: account.id },
-						data: {
-							access_token: tokens.access_token,
-							expires_at: Math.floor(Date.now() / 1000) + tokens.expires_in
-						}
-					});
-
-					accessToken = tokens.access_token;
-				} catch (err) {
-					return json({ error: 'Failed to refresh token' }, { status: 401 });
-				}
-			}
+		if (!accessToken) {
+			return json({ error: 'No Spotify account connected' }, { status: 401 });
 		}
 
 		// Fetch full player state (includes volume and device info)
@@ -88,6 +44,8 @@ export const GET: RequestHandler = async ({ cookies }) => {
 		}
 
 		if (!response.ok) {
+			const errorText = await response.text();
+			console.error('Spotify API error:', response.status, errorText);
 			return json({ error: 'Failed to fetch playback state' }, { status: 500 });
 		}
 
@@ -98,6 +56,11 @@ export const GET: RequestHandler = async ({ cookies }) => {
 			playing: true,
 			is_playing: data.is_playing,
 			volume: data.device?.volume_percent || 50, // Default to 50% if unavailable
+			user: {
+				id: session.user.id,
+				name: session.user.name,
+				email: session.user.email
+			},
 			track: {
 				id: data.item?.id,
 				name: data.item?.name,

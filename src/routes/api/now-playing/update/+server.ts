@@ -74,9 +74,22 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 };
 
 // GET endpoint to fetch all users' currently playing
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, cookies }) => {
 	try {
 		const limit = parseInt(url.searchParams.get('limit') || '20');
+
+		// Get current user ID from session
+		let currentUserId = null;
+		const sessionToken = cookies.get('session-token');
+		if (sessionToken) {
+			const session = await prisma.session.findUnique({
+				where: { sessionToken },
+				include: { user: true }
+			});
+			if (session?.user) {
+				currentUserId = session.user.id;
+			}
+		}
 
 		// Get all active now playing records from the last 10 minutes
 		const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
@@ -103,7 +116,17 @@ export const GET: RequestHandler = async ({ url }) => {
 			take: limit
 		});
 
-		return json({ nowPlayingList });
+		// Include position data in the response
+		const nowPlayingWithPositions = nowPlayingList.map(np => ({
+			...np,
+			positionX: np.positionX,
+			positionY: np.positionY
+		}));
+
+		return json({
+			nowPlayingList: nowPlayingWithPositions,
+			currentUserId
+		});
 	} catch (err: any) {
 		console.error('Error fetching now playing list:', err);
 		return json({ error: 'Failed to fetch now playing list', details: err.message }, { status: 500 });

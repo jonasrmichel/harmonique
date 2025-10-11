@@ -204,8 +204,6 @@
 		<div class="mt-8 text-center text-sm text-gray-500">
 			<p>
 				Changes to your privacy settings take effect immediately.
-				<br />
-				To update your taste profile, visit <a href="/discover/people" class="text-spotify-green hover:underline">Discovery</a>
 			</p>
 		</div>
 	{/if}

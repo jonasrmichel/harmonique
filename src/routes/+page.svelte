@@ -22,17 +22,17 @@
 				<a href="/auth/login" class="btn-primary">
 					Get Started with Spotify
 				</a>
-				<a href="/discover" class="btn-secondary">
+				<a href="/playlists" class="btn-secondary">
 					Explore Playlists
 				</a>
 			</div>
 		{:else}
 			<div class="flex gap-4 justify-center">
-				<a href="/playlists/create" class="btn-primary">
-					Create Playlist
+				<a href="/playlists" class="btn-primary">
+					View Playlists
 				</a>
-				<a href="/discover" class="btn-secondary">
-					Discover Music
+				<a href="/listening-now" class="btn-secondary">
+					See Who's Listening
 				</a>
 			</div>
 		{/if}
@@ -59,11 +59,27 @@
 			</p>
 		</div>
 
-		<div class="card">
-			<div class="text-spotify-green text-4xl mb-4">🔍</div>
-			<h3 class="text-xl font-semibold mb-2">Discover Music</h3>
+		<a href="/listening-now" class="card hover:border-spotify-green/50 transition-colors cursor-pointer">
+			<div class="text-spotify-green text-4xl mb-4">🔥</div>
+			<h3 class="text-xl font-semibold mb-2">Listening Now</h3>
 			<p class="text-gray-400">
-				Explore trending playlists, get recommendations based on your taste, and find new music through your network.
+				See who's listening in real-time with beautiful visualizations. Click on users to listen along with them.
+			</p>
+		</a>
+
+		<a href="/listening-with" class="card hover:border-spotify-green/50 transition-colors cursor-pointer">
+			<div class="text-spotify-green text-4xl mb-4">🎧</div>
+			<h3 class="text-xl font-semibold mb-2">Listening With</h3>
+			<p class="text-gray-400">
+				Track who's synced up and listening along with your music. See real-time stats and manage your listeners.
+			</p>
+		</a>
+
+		<div class="card">
+			<div class="text-spotify-green text-4xl mb-4">🎯</div>
+			<h3 class="text-xl font-semibold mb-2">Listen Along</h3>
+			<p class="text-gray-400">
+				Sync your Spotify playback with friends in real-time. Experience music together, no matter where you are.
 			</p>
 		</div>
 	</div>

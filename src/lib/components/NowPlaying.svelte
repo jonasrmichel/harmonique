@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import SpotifyPlayer from './SpotifyPlayer.svelte';
+	import CustomPlayer from './CustomPlayer.svelte';
 	import { isPlayerExpanded, currentTrack } from '$lib/stores/player';
 
 	export let user: any = null;
 
 	let showPlayer = false;
-	let playerKey = 'persistent-player'; // Key to prevent iframe recreation
-	let shouldAutoplay = true; // Always autoplay when player is shown
+	let lastTrackId: string | null = null; // Track the last played track ID
 
 	// Subscribe to store
 	isPlayerExpanded.subscribe(value => {
@@ -17,6 +16,7 @@
 	interface NowPlaying {
 		playing: boolean;
 		is_playing?: boolean;
+		volume?: number;
 		track?: {
 			id: string;
 			name: string;
@@ -39,6 +39,12 @@
 		};
 	}
 
+	// Track playback progress
+	let currentProgress = 0;
+	let trackDuration = 0;
+	let lastUpdateTime = Date.now();
+	let progressInterval: NodeJS.Timeout;
+
 	let nowPlaying: NowPlaying | null = null;
 	let loading = false;
 	let interval: NodeJS.Timeout;
@@ -56,6 +62,33 @@
 				nowPlaying = await response.json();
 				// Update the store
 				currentTrack.set(nowPlaying);
+
+				// Check if the track has changed
+				if (nowPlaying?.track?.id && nowPlaying.track.id !== lastTrackId) {
+					console.log('Track changed from', lastTrackId, 'to', nowPlaying.track.id);
+					lastTrackId = nowPlaying.track.id;
+					// Auto-expand player when track changes
+					if (nowPlaying.playing) {
+						isPlayerExpanded.set(true);
+					}
+				}
+
+				// Update progress tracking
+				if (nowPlaying?.track) {
+					currentProgress = nowPlaying.track.progress_ms || 0;
+					trackDuration = nowPlaying.track.duration_ms || 0;
+					lastUpdateTime = Date.now();
+
+					// Start or stop progress timer
+					if (nowPlaying.is_playing && !progressInterval) {
+						startProgressTimer();
+					} else if (!nowPlaying.is_playing && progressInterval) {
+						stopProgressTimer();
+					}
+				} else {
+					stopProgressTimer();
+				}
+
 				// Save to database for activity tracking including volume
 				if (nowPlaying) {
 					await fetch('/api/now-playing/update', {
@@ -79,17 +112,40 @@
 		return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 	}
 
+	function startProgressTimer() {
+		if (progressInterval) clearInterval(progressInterval);
+		progressInterval = setInterval(() => {
+			// Increment progress by 100ms
+			if (nowPlaying?.is_playing && currentProgress < trackDuration) {
+				currentProgress = Math.min(currentProgress + 100, trackDuration);
+			}
+		}, 100);
+	}
+
+	function stopProgressTimer() {
+		if (progressInterval) {
+			clearInterval(progressInterval);
+			progressInterval = null;
+		}
+	}
+
 	onMount(() => {
 		// Initial fetch
 		fetchNowPlaying();
 
-		// Poll every 5 seconds
+		// Poll every 5 seconds for track updates (position updates locally)
 		interval = setInterval(fetchNowPlaying, 5000);
+
+		// Listen for player control events to update immediately
+		const handlePlayerControl = (e: CustomEvent) => {
+			// Fetch updated state after a short delay
+			setTimeout(() => {
+				fetchNowPlaying();
+			}, 500);
+		};
 
 		// Listen for track-started events to update immediately
 		const handleTrackStarted = () => {
-			// Force player refresh by changing key
-			playerKey = 'player-' + Date.now();
 			// Immediately fetch and show the player
 			fetchNowPlaying();
 			// Expand the player to show the new track
@@ -100,15 +156,18 @@
 			}, 1500);
 		};
 
+		window.addEventListener('player-control', handlePlayerControl);
 		window.addEventListener('track-started', handleTrackStarted);
 
 		return () => {
+			window.removeEventListener('player-control', handlePlayerControl);
 			window.removeEventListener('track-started', handleTrackStarted);
 		};
 	});
 
 	onDestroy(() => {
 		if (interval) clearInterval(interval);
+		if (progressInterval) clearInterval(progressInterval);
 	});
 </script>
 
@@ -136,17 +195,16 @@
 			</div>
 		{/if}
 
-		<!-- Embedded Spotify Player -->
+		<!-- Custom Player -->
 		{#if showPlayer}
 			{#if nowPlaying?.playing && nowPlaying?.track}
-				{#key playerKey}
-					<SpotifyPlayer
-						uri={`spotify:track:${nowPlaying.track.id}`}
-						type="track"
-						compact={true}
-						autoplay={shouldAutoplay}
-					/>
-				{/key}
+				<CustomPlayer
+					track={nowPlaying.track}
+					isPlaying={nowPlaying.is_playing || false}
+					progress={currentProgress}
+					duration={trackDuration}
+					volume={nowPlaying.volume || 50}
+				/>
 			{:else}
 				<!-- Default player when nothing is playing -->
 				<div class="flex items-center justify-center py-4">
