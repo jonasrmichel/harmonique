@@ -18,8 +18,17 @@
 					<a href="/discover" class="hover:text-spotify-green transition-colors">
 						Discover
 					</a>
+					<a href="/discover/people" class="hover:text-spotify-green transition-colors">
+						Taste Finder
+					</a>
 					<a href="/playlists" class="hover:text-spotify-green transition-colors">
 						Playlists
+					</a>
+					<a href="/listening-now" class="hover:text-spotify-green transition-colors">
+						Listening Now
+					</a>
+					<a href="/listening-with" class="hover:text-spotify-green transition-colors">
+						Listening With
 					</a>
 					{#if data.user}
 						<div class="flex items-center gap-3">

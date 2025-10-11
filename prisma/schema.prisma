@@ -31,6 +31,11 @@ model User {
   nowPlaying    NowPlaying?
   listeningAlong ListenAlong[] @relation("ListenerSessions")
   listenedBy    ListenAlong[] @relation("TargetSessions")
+  tasteProfile  UserTasteProfile?
+  similaritiesA UserSimilarity[] @relation("SimilarityUserA")
+  similaritiesB UserSimilarity[] @relation("SimilarityUserB")
+  sentEmotes    Emote[]   @relation("SentEmotes")
+  receivedEmotes Emote[]  @relation("ReceivedEmotes")
 
   @@map("users")
 }
@@ -208,4 +213,94 @@ model ListenAlong {
   @@index([targetUserId])
   @@index([isActive])
   @@map("listen_along_sessions")
+}
+
+model UserTasteProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+
+  // Spotify taste data (stored as JSON strings)
+  topArtists      String?   // JSON: Array of {id, name, genres, images, popularity}
+  topTracks       String?   // JSON: Array of {id, name, artists, album, popularity}
+  topGenres       String?   // JSON: Array of genre strings with frequency
+  followedArtists String?   // JSON: Array of followed artist IDs
+
+  // Audio profile averages (0.0 to 1.0)
+  avgDanceability Float?
+  avgEnergy       Float?
+  avgValence      Float?    // Musical positivity
+  avgAcousticness Float?
+  avgTempo        Float?     // BPM
+  avgLoudness     Float?     // dB
+
+  // Discovery settings
+  isDiscoverable  Boolean   @default(true)
+  showTopArtists  Boolean   @default(true)
+  showTopTracks   Boolean   @default(true)
+  showGenres      Boolean   @default(true)
+
+  // Metadata
+  lastAnalyzed    DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([isDiscoverable])
+  @@index([lastAnalyzed])
+  @@map("user_taste_profiles")
+}
+
+model UserSimilarity {
+  id              String    @id @default(cuid())
+  userAId         String
+  userBId         String
+
+  // Similarity scores (0.0 to 1.0)
+  overallScore    Float
+  artistScore     Float?
+  trackScore      Float?
+  genreScore      Float?
+  audioScore      Float?    // Audio features similarity
+
+  // Shared elements (stored as JSON strings)
+  commonArtists   String?   // JSON: Array of shared artist objects
+  commonTracks    String?   // JSON: Array of shared track objects
+  commonGenres    String?   // JSON: Array of shared genres
+
+  calculatedAt    DateTime  @default(now())
+
+  // Relations
+  userA           User      @relation("SimilarityUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB           User      @relation("SimilarityUserB", fields: [userBId], references: [id], onDelete: Cascade)
+
+  @@unique([userAId, userBId])
+  @@index([userAId, overallScore])
+  @@index([userBId, overallScore])
+  @@index([calculatedAt])
+  @@map("user_similarities")
+}
+
+model Emote {
+  id              String    @id @default(cuid())
+  senderId        String
+  recipientId     String
+  emoji           String    // The emoji character(s)
+  context         String?   // Context like "listening-now" or track ID
+
+  // Status tracking
+  delivered       Boolean   @default(false)
+  seen            Boolean   @default(false)
+
+  createdAt       DateTime  @default(now())
+  expiresAt       DateTime  // Emotes expire after a short time
+
+  // Relations
+  sender          User      @relation("SentEmotes", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient       User      @relation("ReceivedEmotes", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, delivered])
+  @@index([createdAt])
+  @@index([expiresAt])
+  @@map("emotes")
 }

@@ -43,6 +43,22 @@
 	let currentListenAlongTarget: string | null = null;
 	let syncInterval: NodeJS.Timeout;
 
+	// Emote state
+	let showEmotePicker = false;
+	let emotePickerPosition = { x: 0, y: 0 };
+	let emoteEventSource: EventSource | null = null;
+	let receivedEmotes: Array<{
+		id: string;
+		emoji: string;
+		sender: any;
+		x: number;
+		y: number;
+		timestamp: number;
+	}> = [];
+
+	// Popular emotes for quick selection
+	const popularEmotes = ['❤️', '🔥', '🎵', '🎸', '🎤', '🎧', '👏', '💃', '🕺', '✨', '🌟', '💫', '🚀', '😎', '🤘', '🙌'];
+
 	// Generate deterministic colors from track ID
 	function generateVisualizationFromTrackId(trackId: string) {
 		if (!trackId) return { colors: ['#1DB954', '#191414'], pattern: 'wave' };
@@ -185,6 +201,87 @@
 	// View user's playlists
 	function viewPlaylists(userId: string) {
 		goto(`/playlists?user=${userId}`);
+	}
+
+	// Connect to emote stream
+	function connectEmoteStream() {
+		if (emoteEventSource) {
+			emoteEventSource.close();
+		}
+
+		emoteEventSource = new EventSource('/api/emotes/stream');
+
+		emoteEventSource.onmessage = (event) => {
+			try {
+				const data = JSON.parse(event.data);
+				if (data.type === 'emote') {
+					// Add emote to display with random position around center
+					const centerX = canvas.width / 2;
+					const centerY = canvas.height / 2;
+					const angle = Math.random() * Math.PI * 2;
+					const radius = Math.min(canvas.width, canvas.height) * 0.3;
+
+					receivedEmotes.push({
+						id: data.emote.id,
+						emoji: data.emote.emoji,
+						sender: data.emote.sender,
+						x: centerX + Math.cos(angle) * radius,
+						y: centerY + Math.sin(angle) * radius,
+						timestamp: Date.now()
+					});
+
+					// Remove emote after 5 seconds
+					setTimeout(() => {
+						receivedEmotes = receivedEmotes.filter(e => e.id !== data.emote.id);
+					}, 5000);
+				}
+			} catch (err) {
+				console.error('Failed to parse emote data:', err);
+			}
+		};
+
+		emoteEventSource.onerror = (err) => {
+			console.error('Emote stream error:', err);
+			// Reconnect after 5 seconds
+			setTimeout(connectEmoteStream, 5000);
+		};
+	}
+
+	// Send an emote to a user
+	async function sendEmote(emoji: string) {
+		if (!selectedUser) return;
+
+		try {
+			const response = await fetch('/api/emotes/send', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					recipientId: selectedUser.userId,
+					emoji,
+					context: 'listening-now'
+				})
+			});
+
+			if (response.ok) {
+				showEmotePicker = false;
+				// Show success feedback
+				console.log(`Sent ${emoji} to ${selectedUser.userName}`);
+			} else {
+				const error = await response.json();
+				console.error('Failed to send emote:', error);
+			}
+		} catch (err) {
+			console.error('Error sending emote:', err);
+		}
+	}
+
+	// Show emote picker for a user
+	function showEmotePickerForUser() {
+		showMenu = false;
+		emotePickerPosition = { x: menuPosition.x, y: menuPosition.y };
+		showEmotePicker = true;
 	}
 
 	// Animation functions
@@ -515,6 +612,50 @@
 		ctx.globalAlpha = 1;
 	}
 
+	// Draw floating emotes
+	function drawEmotes(time: number) {
+		if (!ctx || !canvas) return;
+
+		receivedEmotes.forEach(emote => {
+			const age = Date.now() - emote.timestamp;
+			const maxAge = 5000; // 5 seconds
+			const progress = age / maxAge;
+
+			// Fade out as emote ages
+			const opacity = Math.max(0, 1 - progress);
+
+			// Float upward animation
+			const floatY = emote.y - (progress * 100);
+
+			// Gentle sway side to side
+			const swayX = emote.x + Math.sin(time * 0.002 + emote.timestamp) * 20;
+
+			// Size pulse
+			const size = 30 + Math.sin(time * 0.003 + emote.timestamp) * 5;
+
+			ctx.save();
+			ctx.globalAlpha = opacity;
+			ctx.font = `${size}px sans-serif`;
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+
+			// Draw glow effect
+			ctx.shadowBlur = 20;
+			ctx.shadowColor = '#1DB954';
+			ctx.fillText(emote.emoji, swayX, floatY);
+
+			// Draw sender name
+			if (emote.sender?.name) {
+				ctx.font = '12px sans-serif';
+				ctx.fillStyle = '#1DB954';
+				ctx.shadowBlur = 0;
+				ctx.fillText(emote.sender.name, swayX, floatY + size);
+			}
+
+			ctx.restore();
+		});
+	}
+
 	function animate(time: number) {
 		if (!ctx || !canvas) {
 			animationId = requestAnimationFrame(animate);
@@ -527,6 +668,9 @@
 
 		// Draw user dots
 		drawUserFlames(time);
+
+		// Draw floating emotes
+		drawEmotes(time);
 
 		animationId = requestAnimationFrame(animate);
 	}
@@ -601,6 +745,9 @@
 			// Start animation
 			animationId = requestAnimationFrame(animate);
 
+			// Connect to emote stream for real-time emotes
+			connectEmoteStream();
+
 			// Fetch data initially
 			fetchListeningData();
 
@@ -622,6 +769,9 @@
 		if (syncInterval) clearInterval(syncInterval);
 		if (isListeningAlong) {
 			stopListenAlong();
+		}
+		if (emoteEventSource) {
+			emoteEventSource.close();
 		}
 	});
 
@@ -737,6 +887,12 @@
 			>
 				🎵 View Playlists
 			</button>
+			<button
+				on:click={showEmotePickerForUser}
+				class="w-full text-left px-4 py-2 hover:bg-gray-800 transition-colors text-sm"
+			>
+				😊 Send Emote
+			</button>
 			{#if currentListenAlongTarget === selectedUser?.userId}
 				<button
 					on:click={() => {
@@ -770,10 +926,51 @@
 			{/if}
 		</div>
 	{/if}
+
+	<!-- Emote Picker -->
+	{#if showEmotePicker}
+		<div
+			id="emote-picker"
+			class="fixed z-50 bg-gray-900 border border-gray-700 rounded-lg shadow-lg p-4 pointer-events-auto"
+			style="left: {emotePickerPosition.x}px; top: {emotePickerPosition.y}px; transform: translate(-50%, 10px); max-width: 320px;"
+		>
+			<div class="mb-3">
+				<p class="text-sm font-semibold text-gray-300 mb-2">Send an emote to {selectedUser?.userName}</p>
+			</div>
+			<div class="grid grid-cols-8 gap-2">
+				{#each popularEmotes as emoji}
+					<button
+						on:click={() => sendEmote(emoji)}
+						class="text-2xl p-2 hover:bg-gray-800 rounded transition-colors hover:scale-110"
+						title="Send {emoji}"
+					>
+						{emoji}
+					</button>
+				{/each}
+			</div>
+			<button
+				on:click={() => showEmotePicker = false}
+				class="mt-3 w-full px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm transition-colors"
+			>
+				Cancel
+			</button>
+		</div>
+	{/if}
 </div>
 
 <style>
 	canvas {
 		image-rendering: optimizeSpeed;
+	}
+
+	@keyframes float-up {
+		0% {
+			transform: translateY(0) scale(1);
+			opacity: 1;
+		}
+		100% {
+			transform: translateY(-100px) scale(0.5);
+			opacity: 0;
+		}
 	}
 </style>
